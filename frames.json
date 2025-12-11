@@ -1,26 +1,14 @@
 [
     {
-        "nama_file": "mpls25_rev",
-        "nama_tampil": "\u2728MPLS25\u2728",
-        "src": "twibbons\/peserta\/mpls25_rev.png",
-        "kategori": "peserta"
-    },
-    {
-        "nama_file": "mpls25_rev",
-        "nama_tampil": "\u2728MPLS25\u2728",
-        "src": "twibbons\/panitia\/mpls25_rev.png",
+        "nama_file": "laksana",
+        "nama_tampil": "PELANTIKAN LAKSANA 2025",
+        "src": "twibbons\/panitia\/laksana.png",
         "kategori": "panitia"
     },
     {
-        "nama_file": "ld2",
-        "nama_tampil": "LDKS25",
-        "src": "twibbons\/peserta\/ld2.png",
+        "nama_file": "laksana",
+        "nama_tampil": "PELANTIKAN LAKSANA 2025",
+        "src": "twibbons\/peserta\/laksana.png",
         "kategori": "peserta"
-    },
-    {
-        "nama_file": "ldks1",
-        "nama_tampil": "LDKS 2025",
-        "src": "twibbons\/panitia\/ldks1.png",
-        "kategori": "panitia"
     }
 ]

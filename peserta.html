@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TWIBBON PESERTA</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #121212;
+      color: #fff;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      padding: 16px;
+      text-align: center;
+      animation: fadeIn 0.6s ease;
+    }
+    h1 {
+      font-size: 22px;
+      margin-bottom: 12px;
+      color: #00bcd4;
+    }
+    #canvasContainer {
+      position: relative;
+      width: 100%;
+      border: 2px dashed #444;
+      margin-bottom: 16px;
+      background: #1e1e1e;
+      touch-action: none;
+    }
+    #canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    #canvasContainer span {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #777;
+      font-size: 14px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #00bcd4;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: background 0.3s, transform 0.2s;
+    }
+    button:hover {
+      background: #0097a7;
+      transform: scale(1.02);
+    }
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    .frames {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .frame-item img {
+      width: 60px;
+      height: 60px;
+      border: 2px solid #666;
+      border-radius: 4px;
+      object-fit: cover;
+      cursor: pointer;
+      transition: border-color 0.3s;
+    }
+    .frame-item img.selected {
+      border-color: #00bcd4;
+    }
+    .form-group {
+      text-align: left;
+      margin-bottom: 12px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      background: #222;
+      color: #fff;
+    }
+    .footer {
+      font-size: 12px;
+      margin-top: 20px;
+      color: #aaa;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+</head>
+<body>
+  <div class="container" id="mainContent">
+    <h1>TWIBBON PESERTA</h1>
+
+    <div id="canvasContainer">
+      <canvas id="canvas"></canvas>
+      <span id="placeholderText">Upload foto dulu ya!</span>
+    </div>
+
+    <input type="file" id="upload" accept="image/*" style="display:none"/>
+    <button id="uploadBtn">Pilih Foto</button>
+
+    <input type="range" id="zoomSlider" min="0.5" max="3" step="0.01" value="1" style="display: none;" />
+
+    <div>
+      <strong>Pilih Frame:</strong>
+      <div class="frames" id="framesContainer"></div>
+    </div>
+
+    <button id="downloadBtn" disabled>Download Hasil</button>
+
+    <div class="footer">Created And Managed By Sekbid 9 TIK</div>
+  </div>
+
+  <script>
+    const uploadBtn = document.getElementById("uploadBtn");
+    const uploadInput = document.getElementById("upload");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const container = document.getElementById("canvasContainer");
+    const placeholderText = document.getElementById("placeholderText");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const zoomSlider = document.getElementById("zoomSlider");
+    const framesContainer = document.getElementById("framesContainer");
+
+    let photo = null, frame = null, frameSelected = null;
+    let scale = 1, posX = 0, posY = 0;
+    let frameWidth = 2000, frameHeight = 2000; // default sementara
+
+    uploadBtn.addEventListener("click", () => uploadInput.click());
+    uploadInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = function() {
+          photo = img;
+          scale = 1;
+          posX = 0;
+          posY = 0;
+          zoomSlider.value = 1;
+          zoomSlider.style.display = "block";
+          placeholderText.style.display = "none";
+          render();
+          downloadBtn.disabled = !frameSelected;
+        }
+        img.src = evt.target.result;
+      }
+      reader.readAsDataURL(file);
+    });
+
+    async function loadFrames() {
+      try {
+        const res = await fetch("frames.json");
+        const data = await res.json();
+        const pesertaFrames = data.filter(f => f.kategori === "peserta");
+        framesContainer.innerHTML = "";
+
+        pesertaFrames.forEach(f => {
+          const div = document.createElement("div");
+          div.classList.add("frame-item");
+          div.innerHTML = `<img src="${f.src}" alt="${f.nama_tampil}" title="${f.nama_tampil}" />`;
+          const img = div.querySelector("img");
+          img.addEventListener("click", () => {
+            document.querySelectorAll(".frame-item img").forEach(i => i.classList.remove("selected"));
+            img.classList.add("selected");
+            frameSelected = f.src;
+
+            const fr = new Image();
+            fr.onload = () => {
+              frame = fr;
+              frameWidth = fr.width;
+              frameHeight = fr.height;
+              render();
+              downloadBtn.disabled = !photo;
+            };
+            fr.src = f.src;
+          });
+          framesContainer.appendChild(div);
+        });
+      } catch (err) {
+        console.error("Gagal load frame:", err);
+      }
+    }
+    loadFrames();
+
+    function render() {
+      if (!frame) return;
+      canvas.width = frameWidth;
+      canvas.height = frameHeight;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (photo) {
+        const ratio = Math.max(
+          canvas.width / photo.width,
+          canvas.height / photo.height
+        );
+        const newW = photo.width * ratio * scale;
+        const newH = photo.height * ratio * scale;
+        const x = (canvas.width - newW) / 2 + posX;
+        const y = (canvas.height - newH) / 2 + posY;
+        ctx.drawImage(photo, x, y, newW, newH);
+      }
+
+      ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
+    }
+
+    const hammer = new Hammer(container);
+    hammer.get('pinch').set({ enable: true });
+    hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL });
+
+    let lastScale = 1, lastPosX = 0, lastPosY = 0;
+
+    hammer.on("pinchstart", () => lastScale = scale);
+    hammer.on("pinch", ev => {
+      scale = lastScale * ev.scale;
+      zoomSlider.value = scale;
+      render();
+    });
+
+    hammer.on("panstart", () => {
+      lastPosX = posX;
+      lastPosY = posY;
+    });
+
+    hammer.on("pan", ev => {
+      posX = lastPosX + ev.deltaX;
+      posY = lastPosY + ev.deltaY;
+      render();
+    });
+
+    zoomSlider.addEventListener("input", () => {
+      scale = parseFloat(zoomSlider.value);
+      render();
+    });
+
+    downloadBtn.addEventListener("click", () => {
+      render();
+      const link = document.createElement("a");
+      link.download = "twibbon_smanix_peserta.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    });
+  </script>
+</body>
+</html>
